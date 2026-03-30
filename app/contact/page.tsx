@@ -2,7 +2,7 @@
 
 import { LogoWithFallback } from "@/app/components/LogoWithFallback";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 
 function formatOku(value: number) {
   return `${(value / 100000000).toFixed(1)}億円`;
@@ -74,6 +74,10 @@ function ContactPageContent() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  /** IME 変換中はサニタイズしない（本番・モバイルで全角入力が壊れるのを防ぐ） */
+  const emailImeRef = useRef(false);
+  const phoneImeRef = useRef(false);
+
   const submit = async () => {
     setErrorMessage("");
 
@@ -82,7 +86,10 @@ function ContactPageContent() {
       return;
     }
 
-    if (!email.trim()) {
+    const emailForSend = sanitizeHalfWidthEmail(email);
+    const phoneForSend = sanitizeHalfWidthPhone(phone);
+
+    if (!emailForSend.trim()) {
       setErrorMessage("メールアドレスを入力してください。");
       return;
     }
@@ -98,17 +105,26 @@ function ContactPageContent() {
         body: JSON.stringify({
           company,
           name,
-          email,
-          phone,
+          email: emailForSend,
+          phone: phoneForSend,
           message,
           diagnosticData,
         }),
       });
 
-      const json = await res.json();
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        missingEnv?: string[];
+      };
 
       if (!res.ok || !json.ok) {
-        throw new Error(json.error || "送信に失敗しました");
+        const base = json.error || "送信に失敗しました";
+        const envHint =
+          Array.isArray(json.missingEnv) && json.missingEnv.length > 0
+            ? `（Vercel の Environment Variables で Production に設定: ${json.missingEnv.join(", ")}。変更後は Redeploy が必要です）`
+            : "";
+        throw new Error(base + envHint);
       }
 
       router.push("/thanks");
@@ -185,10 +201,28 @@ function ContactPageContent() {
                 inputMode="email"
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(sanitizeHalfWidthEmail(e.target.value))}
+                onCompositionStart={() => {
+                  emailImeRef.current = true;
+                }}
+                onCompositionEnd={(e) => {
+                  emailImeRef.current = false;
+                  setEmail(sanitizeHalfWidthEmail(e.currentTarget.value));
+                }}
+                onChange={(e) => {
+                  if (emailImeRef.current) {
+                    setEmail(e.target.value);
+                  } else {
+                    setEmail(sanitizeHalfWidthEmail(e.target.value));
+                  }
+                }}
+                onBlur={(e) =>
+                  setEmail(sanitizeHalfWidthEmail(e.currentTarget.value))
+                }
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
               />
-              <p className="mt-1 text-xs text-slate-500">半角英数字・記号のみ入力できます。</p>
+              <p className="mt-1 text-xs text-slate-500">
+                半角英数字・記号のみ保存されます（全角は確定時に半角へ直ります）。
+              </p>
             </div>
 
             <div>
@@ -198,10 +232,28 @@ function ContactPageContent() {
                 inputMode="tel"
                 autoComplete="tel"
                 value={phone}
-                onChange={(e) => setPhone(sanitizeHalfWidthPhone(e.target.value))}
+                onCompositionStart={() => {
+                  phoneImeRef.current = true;
+                }}
+                onCompositionEnd={(e) => {
+                  phoneImeRef.current = false;
+                  setPhone(sanitizeHalfWidthPhone(e.currentTarget.value));
+                }}
+                onChange={(e) => {
+                  if (phoneImeRef.current) {
+                    setPhone(e.target.value);
+                  } else {
+                    setPhone(sanitizeHalfWidthPhone(e.target.value));
+                  }
+                }}
+                onBlur={(e) =>
+                  setPhone(sanitizeHalfWidthPhone(e.currentTarget.value))
+                }
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
               />
-              <p className="mt-1 text-xs text-slate-500">半角数字・+（）- スペースのみ入力できます。</p>
+              <p className="mt-1 text-xs text-slate-500">
+                半角数字・+（）- スペースのみ保存されます（全角は確定時に半角へ直ります）。
+              </p>
             </div>
 
             <div>

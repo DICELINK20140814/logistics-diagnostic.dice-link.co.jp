@@ -59,19 +59,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = Number(process.env.SMTP_PORT || 587);
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM;
-    const notifyTo = process.env.NOTIFY_EMAIL_TO;
+    const smtpHost = process.env.SMTP_HOST?.trim();
+    const smtpPort = Number(process.env.SMTP_PORT?.trim() || 587);
+    const smtpUser = process.env.SMTP_USER?.trim();
+    const smtpPass = process.env.SMTP_PASS?.trim();
+    const smtpFrom = process.env.SMTP_FROM?.trim();
+    const notifyTo = process.env.NOTIFY_EMAIL_TO?.trim();
     /** SMTP 認証ユーザーと異なる From を使う場合、MAIL FROM はこちらにしないと拒否されることが多い */
     const smtpEnvelopeFrom =
       process.env.SMTP_ENVELOPE_FROM?.trim() || smtpUser;
 
-    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom || !notifyTo) {
+    const missingEnv: string[] = [];
+    if (!smtpHost) missingEnv.push("SMTP_HOST");
+    if (!smtpUser) missingEnv.push("SMTP_USER");
+    if (!smtpPass) missingEnv.push("SMTP_PASS");
+    if (!smtpFrom) missingEnv.push("SMTP_FROM");
+    if (!notifyTo) missingEnv.push("NOTIFY_EMAIL_TO");
+
+    if (missingEnv.length > 0) {
+      console.warn("[contact] SMTP env missing:", missingEnv.join(", "));
       return NextResponse.json(
-        { ok: false, error: "メール設定が不足しています" },
+        {
+          ok: false,
+          error: "メール設定が不足しています",
+          missingEnv,
+        },
         { status: 500 }
       );
     }
