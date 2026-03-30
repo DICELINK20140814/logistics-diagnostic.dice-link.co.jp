@@ -2,7 +2,7 @@
 
 import { LogoWithFallback } from "@/app/components/LogoWithFallback";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 function formatOku(value: number) {
   return `${(value / 100000000).toFixed(1)}億円`;
@@ -43,7 +43,7 @@ function sanitizeHalfWidthPhone(value: string): string {
   return n.replace(/[^0-9+\-()\s]/g, "");
 }
 
-export default function ContactPage() {
+function ContactPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const raw = searchParams.get("data");
@@ -233,5 +233,28 @@ export default function ContactPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function ContactPageFallback() {
+  return (
+    <main className="min-h-screen bg-[#F8FAFC] text-[#0A2643]">
+      <header className="border-b-4 border-[#CEC1A1] bg-white">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4">
+          <LogoWithFallback />
+        </div>
+      </header>
+      <div className="mx-auto max-w-4xl px-6 py-20 text-center text-slate-600">
+        読み込み中…
+      </div>
+    </main>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={<ContactPageFallback />}>
+      <ContactPageContent />
+    </Suspense>
   );
 }

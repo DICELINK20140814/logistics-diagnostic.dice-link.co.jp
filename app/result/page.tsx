@@ -3,6 +3,7 @@
 import { LogoWithFallback } from "@/app/components/LogoWithFallback";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 type WeakPoint = {
   key: string;
@@ -23,7 +24,7 @@ function formatOku(value: number) {
   return `${(value / 100000000).toFixed(1)}億円`;
 }
 
-export default function ResultPage() {
+function ResultPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const raw = searchParams.get("data");
@@ -223,5 +224,28 @@ export default function ResultPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function ResultPageFallback() {
+  return (
+    <main className="min-h-screen bg-[#F8FAFC] text-[#0A2643]">
+      <header className="border-b-4 border-[#CEC1A1] bg-white">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4">
+          <LogoWithFallback />
+        </div>
+      </header>
+      <div className="mx-auto max-w-6xl px-6 py-20 text-center text-slate-600">
+        読み込み中…
+      </div>
+    </main>
+  );
+}
+
+export default function ResultPage() {
+  return (
+    <Suspense fallback={<ResultPageFallback />}>
+      <ResultPageContent />
+    </Suspense>
   );
 }
