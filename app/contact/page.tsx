@@ -112,13 +112,24 @@ function ContactPageContent() {
         }),
       });
 
-      const json = (await res.json()) as {
+      let json: {
         ok?: boolean;
         error?: string;
         missingEnv?: string[];
+        failure?: "config" | "smtp";
       };
+      try {
+        json = (await res.json()) as typeof json;
+      } catch {
+        throw new Error(
+          `送信に失敗しました（応答が不正です。HTTP ${res.status}）。しばらくしてから再度お試しください。`
+        );
+      }
 
       if (!res.ok || !json.ok) {
+        if (json.failure === "smtp" && json.error) {
+          throw new Error(json.error);
+        }
         const base = json.error || "送信に失敗しました";
         const envHint =
           Array.isArray(json.missingEnv) && json.missingEnv.length > 0
@@ -220,9 +231,6 @@ function ContactPageContent() {
                 }
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
               />
-              <p className="mt-1 text-xs text-slate-500">
-                半角英数字・記号のみ保存されます（全角は確定時に半角へ直ります）。
-              </p>
             </div>
 
             <div>
@@ -251,9 +259,6 @@ function ContactPageContent() {
                 }
                 className="w-full rounded-xl border border-slate-300 px-4 py-3"
               />
-              <p className="mt-1 text-xs text-slate-500">
-                半角数字・+（）- スペースのみ保存されます（全角は確定時に半角へ直ります）。
-              </p>
             </div>
 
             <div>

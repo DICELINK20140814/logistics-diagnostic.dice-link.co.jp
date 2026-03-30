@@ -13,7 +13,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="max-w-4xl">
           <div className="mb-4 inline-flex rounded-full border border-[#CEC1A1] px-4 py-1 text-sm font-medium text-[#0A2643]">
-            Oil Shock Logistics Diagnostic
+            Logistics Diagnostic
           </div>
 
           <h1 className="mb-6 text-4xl font-bold leading-tight md:text-5xl">
